@@ -1,5 +1,5 @@
 // Service Worker for Code Snippets PWA
-const CACHE_NAME = 'code-snippets-cache-v1';
+const CACHE_NAME = 'code-snippets-cache-v2';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -37,6 +37,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache, fall back to network
 self.addEventListener('fetch', (event) => {
+  // Skip service worker for API requests - let them go directly to the network
+  if (event.request.url.includes('/api/')) {
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -59,10 +64,7 @@ self.addEventListener('fetch', (event) => {
 
           caches.open(CACHE_NAME)
             .then((cache) => {
-              // Don't cache API requests
-              if (!event.request.url.includes('/api/')) {
-                cache.put(event.request, responseToCache);
-              }
+              cache.put(event.request, responseToCache);
             });
 
           return response;

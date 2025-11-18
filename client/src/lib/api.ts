@@ -1,6 +1,8 @@
 // API client for making requests to the backend
 
-const API_BASE = '';
+// In development, use relative URLs (Vite proxy)
+// In production, use the backend URL from environment variable
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 let authToken: string | null = localStorage.getItem('authToken');
 

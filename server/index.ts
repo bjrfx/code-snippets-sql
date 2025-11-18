@@ -6,6 +6,31 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// CORS middleware - allow requests from Azure Static Web Apps
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://blue-forest-05190c01e-preview.westus2.3.azurestaticapps.net',
+    'http://localhost:5173', // Development
+    'http://localhost:5001', // Development
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
