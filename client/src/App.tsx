@@ -1,0 +1,120 @@
+import { Switch, Route, useLocation } from 'wouter';
+import { useState } from 'react';
+import { userAPI } from './lib/api';
+import { Toaster } from '@/components/ui/toaster';
+import { useAuth } from './lib/auth';
+import { useTheme } from './hooks/use-theme';
+import { useFontSize } from './hooks/use-font-size';
+import { useEffect } from 'react';
+import { SidebarProvider } from '@/contexts/SidebarContext';
+import Home from '@/pages/Home';
+import Auth from '@/pages/Auth';
+import Settings from '@/pages/Settings';
+import NotFound from '@/pages/not-found';
+import SnippetDetail from '@/pages/SnippetDetail';
+import NoteDetail from '@/pages/NoteDetail';
+import ChecklistDetail from '@/pages/ChecklistDetail';
+import SmartNoteDetail from '@/pages/SmartNoteDetail';
+import TagDetail from '@/pages/TagDetail';
+import Projects from '@/pages/Projects';
+import ProjectDetail from '@/pages/ProjectDetail';
+import Profile from '@/pages/Profile';
+import Search from '@/pages/Search';
+import AdminDashboard from '@/pages/AdminDashboard';
+import MobileAdminDashboard from '@/pages/MobileAdminDashboard';
+import UserDetail from '@/pages/UserDetail';
+import { useIsMobile } from './hooks/use-is-mobile';
+
+function PrivateRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading } = useAuth();
+  const [, navigate] = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return user ? <Component /> : null;
+}
+
+function AdminRoute({ component: Component }: { component: React.ComponentType }) {
+  const { user, isLoading } = useAuth();
+  const [, navigate] = useLocation();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        navigate('/auth');
+        return;
+      }
+
+      try {
+        const userData = await userAPI.getById(user.id);
+        setIsAdmin(!!userData.isAdmin);
+        if (!userData.isAdmin) {
+          navigate('/');
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        navigate('/');
+      }
+    };
+
+    if (!isLoading) {
+      checkAdminStatus();
+    }
+  }, [user, isLoading, navigate]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (user && isAdmin) ? <Component /> : null;
+}
+
+function Router() {
+  // Remove the duplicate auth check here
+  return (
+    <Switch>
+      <Route path="/auth" component={Auth} />
+      <Route path="/" component={() => <PrivateRoute component={Home} />} />
+      <Route path="/settings" component={() => <PrivateRoute component={Settings} />} />
+      <Route path="/projects" component={() => <PrivateRoute component={Projects} />} />
+      <Route path="/projects/:id" component={() => <PrivateRoute component={ProjectDetail} />} />
+      <Route path="/profile" component={() => <PrivateRoute component={Profile} />} />
+      <Route path="/search" component={() => <PrivateRoute component={Search} />} />
+      <Route path="/admin" component={() => {
+        const isMobile = useIsMobile();
+        return <AdminRoute component={isMobile ? MobileAdminDashboard : AdminDashboard} />;
+      }} />
+      <Route path="/admin/users/:id" component={() => <AdminRoute component={UserDetail} />} />
+      <Route path="/snippets/:id" component={() => <PrivateRoute component={SnippetDetail} />} />
+      <Route path="/notes/:id" component={() => <PrivateRoute component={NoteDetail} />} />
+      <Route path="/checklists/:id" component={() => <PrivateRoute component={ChecklistDetail} />} />
+      <Route path="/smart-notes/:id" component={() => <PrivateRoute component={SmartNoteDetail} />} />
+      <Route path="/tags/:tag" component={() => <PrivateRoute component={TagDetail} />} />
+      <Route component={NotFound} />
+    </Switch>
+  );
+}
+
+function App() {
+  // Initialize theme and font size after QueryClient is available
+  useTheme();
+  useFontSize();
+
+  return (
+    <SidebarProvider>
+      <Router />
+      <Toaster />
+    </SidebarProvider>
+  );
+}
+
+export default App;
