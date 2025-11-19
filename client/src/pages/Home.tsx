@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { snippetAPI, noteAPI, checklistAPI, smartNoteAPI, userAPI } from '@/lib/api';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { snippetAPI, noteAPI, checklistAPI, smartNoteAPI } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { SnippetCard } from '@/components/snippet/SnippetCard';
@@ -11,17 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { 
   Plus, 
@@ -32,8 +21,7 @@ import {
   TrendingUp,
   Clock,
   Zap,
-  X,
-  User
+  X
 } from 'lucide-react';
 import { CreateItemDialog } from '@/components/dialogs/CreateItemDialog';
 import { PremiumFeatureAlert } from '@/components/PremiumFeatureAlert';
@@ -41,51 +29,8 @@ import type { Snippet } from '@shared/schema';
 
 export default function Home() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('snippets');
   const [fabOpen, setFabOpen] = useState(false);
-  const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
-  const [displayName, setDisplayName] = useState('');
-
-  // Check if display name is set
-  useEffect(() => {
-    if (user && !user.displayName) {
-      setShowDisplayNameDialog(true);
-    }
-  }, [user]);
-
-  // Mutation to update display name
-  const updateDisplayNameMutation = useMutation({
-    mutationFn: (name: string) => userAPI.update(user!.id, { displayName: name }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['auth'] });
-      toast({
-        title: 'Success',
-        description: 'Display name updated successfully',
-      });
-      setShowDisplayNameDialog(false);
-    },
-    onError: (error: any) => {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.message || 'Failed to update display name',
-      });
-    },
-  });
-
-  const handleSaveDisplayName = () => {
-    if (!displayName.trim()) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Please enter a display name',
-      });
-      return;
-    }
-    updateDisplayNameMutation.mutate(displayName.trim());
-  };
 
   const { data: snippets, isLoading: snippetsLoading } = useQuery<any[]>({
     queryKey: ['snippets', user?.id],
@@ -706,47 +651,6 @@ export default function Home() {
         {/* Floating Action Button with Radial Menu */}
         <FloatingActionButton />
       </div>
-
-      {/* Display Name Setup Dialog */}
-      <Dialog open={showDisplayNameDialog} onOpenChange={setShowDisplayNameDialog}>
-        <DialogContent className="sm:max-w-[425px]" onInteractOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Set Your Display Name
-            </DialogTitle>
-            <DialogDescription>
-              Please set a display name for your account. This will be shown throughout the application.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="displayName">Display Name</Label>
-              <Input
-                id="displayName"
-                placeholder="Enter your display name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSaveDisplayName();
-                  }
-                }}
-                autoFocus
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              onClick={handleSaveDisplayName}
-              disabled={updateDisplayNameMutation.isPending || !displayName.trim()}
-              className="w-full"
-            >
-              {updateDisplayNameMutation.isPending ? 'Saving...' : 'Save Display Name'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </MainLayout>
   );
 }
